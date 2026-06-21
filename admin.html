@@ -51,6 +51,7 @@
       <li><a data-tab="dashboard" class="active"><span class="nav-icon">📊</span><span>ড্যাশবোর্ড</span></a></li>
       <li><a data-tab="apps"><span class="nav-icon">📱</span><span>Apps</span></a></li>
       <li><a data-tab="slides"><span class="nav-icon">🎬</span><span>স্লাইডস</span></a></li>
+      <li><a data-tab="testimonials"><span class="nav-icon">⭐</span><span>মতামত</span></a></li>
       <li><a data-tab="hero"><span class="nav-icon">🏠</span><span>হোম / হিরো</span></a></li>
       <li><a data-tab="about"><span class="nav-icon">ℹ️</span><span>আমাদের সম্পর্কে</span></a></li>
       <li><a data-tab="contact"><span class="nav-icon">✉️</span><span>যোগাযোগ</span></a></li>
@@ -147,6 +148,23 @@
         বা অন্য কোথাও আপলোড করে mp4 direct URL দিন।
       </div>
       <div id="slidesList" class="list-card">
+        <div class="list-empty">লোড হচ্ছে...</div>
+      </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="admin-section" id="tab-testimonials">
+      <div class="admin-header">
+        <div>
+          <h1>মতামত (Testimonials)</h1>
+          <p>ব্যবহারকারী/ক্লায়েন্টদের রিভিউ যোগ করুন</p>
+        </div>
+        <button class="btn-primary" id="addTestimonialBtn">➕ নতুন মতামত</button>
+      </div>
+      <div class="alert-banner">
+        <strong>💡 টিপ:</strong> <code>visible: false</code> রাখলে রিভিউটি পাবলিক সাইটে দেখাবে না। Avatar না দিলে নামের প্রথম অক্ষর দেখানো হবে।
+      </div>
+      <div id="testimonialsList" class="list-card">
         <div class="list-empty">লোড হচ্ছে...</div>
       </div>
     </section>
@@ -317,7 +335,7 @@
 <div class="modal-overlay" id="modalHost"></div>
 
 <!-- GitHub picker overlay (separate so it does not destroy parent modal) -->
-<div class="modal-overlay" id="ghPickerHost" style="z-index:3000;"></div>
+<div class="modal-overlay" id="ghPickerHost" style="z-index:3500;"></div>
 
 <!-- Icon picker overlay -->
 <div class="modal-overlay" id="iconPickerHost" style="z-index:3000;"></div>

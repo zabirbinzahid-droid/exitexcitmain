@@ -61,6 +61,36 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------------
+    // App view counters — public can increment by exactly 1;
+    // cannot read other fields, cannot decrement, cannot set
+    // arbitrary numbers (basic abuse protection without a backend).
+    // ----------------------------------------------------------
+    match /appViews/{appId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['views'])
+                    && request.resource.data.views == 1;
+      allow update: if request.resource.data.keys().hasOnly(['views'])
+                    && request.resource.data.views == resource.data.views + 1;
+      allow delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------------
+    // Testimonials — public read visible ones; admins full control
+    // ----------------------------------------------------------
+    match /testimonials/{testimonialId} {
+      allow read: if resource.data.visible == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------------
+    // Blog / Updates posts — public read visible ones; admins full control
+    // ----------------------------------------------------------
+    match /posts/{postId} {
+      allow read: if resource.data.visible == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------------
     // Admins collection — only admins can read/write
     // ----------------------------------------------------------
     match /admins/{adminId} {

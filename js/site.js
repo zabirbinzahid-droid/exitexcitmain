@@ -131,7 +131,9 @@
       slidesPrev:     document.querySelector('[data-slides-prev]'),
       slidesNext:     document.querySelector('[data-slides-next]'),
       aboutWrap:      document.querySelector('[data-about-wrap]'),
-      contactWrap:    document.querySelector('[data-contact-wrap]')
+      contactWrap:    document.querySelector('[data-contact-wrap]'),
+      testimonialsSection: document.querySelector('[data-testimonials-section]'),
+      testimonialsGrid:    document.querySelector('[data-testimonials-grid]')
     };
 
     if (!isFirebaseConfigured()) {
@@ -171,6 +173,7 @@
     loadContact();
     loadApps();
     loadSlides();
+    loadTestimonials();
   }
 
   // ---------- HERO ----------
@@ -495,11 +498,6 @@
   }
 
   function renderAppCard(app) {
-    const hasImage = !!app.previewImage;
-    const hasLink = !!app.link;
-    const statusClass = app.status || 'soon';
-    const statusDotClass = statusClass === 'live' ? 'live' : (statusClass === 'dev' ? 'dev' : 'soon');
-    const statusColor = statusClass === 'live' ? '#22C55E' : (statusClass === 'dev' ? 'var(--gold)' : 'var(--gray)');
     const iconColorClass = `app-icon ${app.iconColor || 'navy'}-icon`;
 
     // Icon rendering: if it's a URL, show <img>, else emoji
@@ -509,49 +507,68 @@
       ? `<img src="${escapeAttr(iconStr)}" alt="icon" style="width:60%;height:60%;object-fit:contain;">`
       : escapeHtml(iconStr);
 
-    let previewHtml;
-    if (hasImage) {
-      previewHtml = `<img src="${escapeAttr(app.previewImage)}" alt="${escapeAttr(app.name || 'App')}">`;
-    } else {
-      previewHtml = `
-        <div class="coming-soon">
-          <span>${iconHtml}</span>
-          <p>শীঘ্রই আসছে</p>
-          <p style="font-size:0.75rem;color:#94A3B8;">${escapeHtml(app.tagline || '')}</p>
-        </div>
-      `;
-    }
+    const statusClass = app.status || 'soon';
+    const statusDot = statusClass === 'live' ? '🟢' : (statusClass === 'dev' ? '🛠️' : '⏳');
 
-    let linkHtml;
-    if (hasLink) {
-      linkHtml = `<a href="${escapeAttr(app.link)}" target="_blank" class="app-link primary">${escapeHtml(app.linkText || 'অ্যাপ দেখুন →')}</a>`;
-    } else {
-      linkHtml = `<span class="app-link disabled">${escapeHtml(app.linkText || 'শীঘ্রই আসছে')}</span>`;
-    }
-
-    const featuresHtml = (app.features || []).map(f => `<span class="feat-chip">${escapeHtml(f)}</span>`).join('');
-
+    // Phone-home-screen style: icon + name only. Tap opens the full
+    // detail modal (description, screenshots, features, link — see
+    // openAppDetail) so the grid tile itself stays small and uniform.
     return `
       <div class="app-card fade-in" data-app-id="${escapeAttr(app.id)}">
-        <div class="app-card-header">
-          <div class="${iconColorClass}">${iconHtml}</div>
-          <div class="app-meta">
-            <h3>${escapeHtml(app.name || 'Untitled App')}</h3>
-            <span class="app-type ${escapeAttr(app.type || 'web')}">${escapeHtml(app.tagline || '')}</span>
-          </div>
+        <div class="${iconColorClass}">${iconHtml}</div>
+        <div class="app-meta">
+          <h3>${escapeHtml(app.name || 'Untitled App')}</h3>
         </div>
-        <div class="app-preview">${previewHtml}</div>
-        <p class="app-desc">${escapeHtml(app.description || '')}</p>
-        <div class="app-features">${featuresHtml}</div>
-        <div class="app-footer">
-          <div class="app-status">
-            <span class="status-dot ${statusDotClass}"></span>
-            <span style="color:${statusColor};font-size:0.82rem;">${escapeHtml(app.statusText || '')}</span>
-          </div>
-          ${linkHtml}
-        </div>
+        <span class="app-status-dot" title="${escapeAttr(app.statusText || statusClass)}">${statusDot}</span>
       </div>
     `;
+  }
+
+  // ---------- TESTIMONIALS ----------
+  function loadTestimonials() {
+    if (!els.testimonialsGrid || !els.testimonialsSection) return;
+    window.db.collection('testimonials')
+      .where('visible', '==', true)
+      .get()
+      .then(snap => {
+        if (snap.empty) {
+          els.testimonialsSection.style.display = 'none';
+          return;
+        }
+        const items = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+        els.testimonialsSection.style.display = '';
+        renderTestimonials(items);
+      })
+      .catch(err => {
+        console.warn('Testimonials load failed:', err);
+        els.testimonialsSection.style.display = 'none';
+      });
+  }
+
+  function renderTestimonials(items) {
+    els.testimonialsGrid.innerHTML = items.map(t => {
+      const rating = Math.max(0, Math.min(5, parseInt(t.rating, 10) || 5));
+      const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+      const avatarHtml = t.avatar
+        ? `<img src="${escapeAttr(t.avatar)}" alt="${escapeAttr(t.name || '')}">`
+        : `<span>${escapeHtml((t.name || '?').trim().charAt(0).toUpperCase())}</span>`;
+      return `
+        <div class="testimonial-card fade-in">
+          <div class="testimonial-stars">${stars}</div>
+          <p class="testimonial-msg">"${escapeHtml(t.message || '')}"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">${avatarHtml}</div>
+            <div>
+              <div class="testimonial-name">${escapeHtml(t.name || '')}</div>
+              ${t.role ? `<div class="testimonial-role">${escapeHtml(t.role)}</div>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    bindScrollAnimations();
   }
 
   // ---------- APP DETAIL MODAL ----------
@@ -623,6 +640,7 @@
         <div>
           <h2>${escapeHtml(app.name || '')}</h2>
           <span class="app-type ${escapeAttr(app.type || 'web')}">${escapeHtml(app.tagline || '')}</span>
+          <span class="app-view-count" id="appViewCount">👁 …</span>
         </div>
       </div>
       <div class="app-detail-content">
@@ -673,6 +691,40 @@
     `;
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
+    trackAppView(app.id);
+  }
+
+  // ---------- VIEW COUNTER ----------
+  // Reads + (at most once per session per app) increments a public
+  // appViews/{appId}.views counter. Firestore rules only allow +1 writes
+  // (see firestore.rules), so this can't be abused to set arbitrary numbers.
+  function trackAppView(appId) {
+    if (!appId || !window.db) return;
+    const badge = document.getElementById('appViewCount');
+    const ref = window.db.collection('appViews').doc(appId);
+    const sessionKey = 'viewed_' + appId;
+    const alreadyViewedThisSession = sessionStorage.getItem(sessionKey) === '1';
+
+    const showCount = (n) => { if (badge) badge.textContent = '👁 ' + (n || 0) + ' views'; };
+
+    if (alreadyViewedThisSession) {
+      ref.get().then(doc => showCount(doc.exists ? doc.data().views : 0)).catch(() => showCount(0));
+      return;
+    }
+
+    ref.get().then(doc => {
+      if (doc.exists) {
+        return ref.update({ views: firebase.firestore.FieldValue.increment(1) })
+          .then(() => showCount((doc.data().views || 0) + 1));
+      } else {
+        return ref.set({ views: 1 }).then(() => showCount(1));
+      }
+    }).then(() => {
+      sessionStorage.setItem(sessionKey, '1');
+    }).catch(err => {
+      console.warn('View tracking failed:', err);
+      if (badge) badge.style.display = 'none';
+    });
   }
 
   // ---------- SLIDES ----------

@@ -178,7 +178,9 @@
   /* ─── APPS SECTION — "Phone home screen" icon grid ───
      Multiple small portrait tiles per row, like phone app icons.
      Tap a tile to open the full app-detail modal (preview/desc/features
-     still live there — see openAppDetail in site.js). */
+     live there — see openAppDetail/renderAppCard in site.js). The tile
+     itself only ever renders icon + name + a tiny status dot, so its
+     height is fixed and uniform no matter what data the app has. */
   .apps-section { background: var(--off-white); }
   .apps-grid {
     display:grid;
@@ -186,9 +188,9 @@
     gap:18px 14px;
   }
   .app-card {
+    position: relative;
     background:var(--white);
     border-radius:22px;
-    overflow:hidden;
     box-shadow: 0 4px 16px rgba(15,29,61,0.07);
     border: 1px solid var(--gray-light);
     transition: transform 0.25s, box-shadow 0.25s;
@@ -201,14 +203,11 @@
     transform: translateY(-4px);
     box-shadow: 0 12px 30px rgba(15,29,61,0.13);
   }
-  .app-card-header {
-    flex-direction:column;
-    padding:0; gap:10px;
-  }
   .app-icon {
     width:60px; height:60px; border-radius:18px;
     display:flex; align-items:center; justify-content:center;
     font-size:1.7rem; flex-shrink:0;
+    margin-bottom:10px;
   }
   .app-icon.gold-icon { background:linear-gradient(135deg,var(--gold),var(--gold-light)); }
   .app-icon.green-icon { background:linear-gradient(135deg,var(--green),var(--green-light)); }
@@ -217,20 +216,23 @@
   .app-meta { width:100%; }
   .app-meta h3 {
     font-size:0.85rem; font-weight:700; color:var(--navy-dark);
-    margin-bottom:2px;
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
     overflow:hidden; line-height:1.25;
   }
-  .app-meta .app-type {
-    display:none; /* hidden on tile — still shown inside detail modal */
+  .app-status-dot {
+    position:absolute; top:10px; right:10px;
+    font-size:0.7rem;
+    background:var(--white);
+    border-radius:50%;
+    width:20px; height:20px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 1px 4px rgba(0,0,0,0.15);
   }
-  /* Hide the heavy card sections on the grid tile; they live in the detail modal */
-  .app-preview, .app-desc, .app-features, .app-footer { display:none; }
 
-  .app-meta h3 {
-    font-size:1.15rem; font-weight:800; color:var(--navy-dark); margin-bottom:3px;
-  }
-  .app-meta .app-type {
+  /* The classes below (.app-type, .feat-chip, .app-link) are NOT used on
+     the grid tile anymore — they're used inside the app-detail modal
+     (openAppDetail in site.js), which is a separate part of the DOM. */
+  .app-type {
     font-size:0.78rem; font-weight:600; padding:3px 10px; border-radius:50px;
     display:inline-block;
   }
@@ -238,50 +240,11 @@
   .app-type.mobile { background:var(--green-pale); color:var(--green); }
   .app-type.saas { background:rgba(27,47,94,0.07); color:var(--navy); }
 
-  .app-preview {
-    margin:20px 28px;
-    border-radius:14px; overflow:hidden;
-    background:var(--off-white);
-    height:200px; display:flex; align-items:center; justify-content:center;
-    position:relative;
-  }
-  .app-preview img {
-    height:100%; object-fit:cover; object-position:top center;
-    border-radius:10px;
-  }
-  .app-preview .coming-soon {
-    display:flex; flex-direction:column; align-items:center; gap:10px;
-    color:var(--gray); font-size:0.85rem;
-  }
-  .app-preview .coming-soon span { font-size:2.5rem; }
-
-  .app-desc {
-    padding:0 28px; color:var(--gray); font-size:0.9rem; line-height:1.65;
-    flex:1; font-family:'Noto Sans Bengali','Inter',sans-serif;
-  }
-
-  .app-features {
-    padding:16px 28px; display:flex; flex-wrap:wrap; gap:8px;
-  }
   .feat-chip {
     background:var(--off-white); border:1px solid var(--gray-light);
     color:var(--gray); padding:4px 12px; border-radius:50px;
     font-size:0.75rem; font-weight:500;
   }
-
-  .app-footer {
-    padding:20px 28px;
-    border-top:1px solid var(--gray-light);
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .app-status {
-    display:flex; align-items:center; gap:6px;
-    font-size:0.8rem; font-weight:600;
-  }
-  .status-dot { width:8px; height:8px; border-radius:50%; }
-  .status-dot.live { background:#22C55E; box-shadow:0 0 0 3px rgba(34,197,94,0.2); }
-  .status-dot.dev { background:var(--gold); box-shadow:0 0 0 3px rgba(232,168,0,0.2); }
-  .status-dot.soon { background:var(--gray); }
 
   .app-link {
     display:inline-flex; align-items:center; gap:6px;
@@ -506,13 +469,8 @@
     .apps-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
     @media (min-width: 480px) { .apps-grid { grid-template-columns: repeat(4, 1fr); } }
 
-    .app-card-header { padding: 18px 18px 0; gap: 12px; }
     .app-icon { width: 48px; height: 48px; font-size: 1.4rem; }
-    .app-meta h3 { font-size: 1.05rem; }
-    .app-preview { margin: 16px 18px; height: 160px; }
-    .app-desc { padding: 0 18px; font-size: 0.85rem; }
-    .app-features { padding: 12px 18px; }
-    .app-footer { padding: 16px 18px; flex-wrap: wrap; gap: 10px; }
+    .app-meta h3 { font-size: 0.8rem; }
 
     .about-grid, .contact-grid { grid-template-columns: 1fr; gap: 36px; }
     .about-visual { order: -1; }
@@ -552,7 +510,7 @@
 
   /* ─── TABLET (768-1024) ─── */
   @media (min-width: 769px) and (max-width: 1024px) {
-    .apps-grid { grid-template-columns: repeat(2, 1fr); }
+    .apps-grid { grid-template-columns: repeat(5, 1fr); }
     .about-grid, .contact-grid { gap: 36px; }
   }
 
@@ -1163,7 +1121,7 @@ nav .theme-toggle { color: var(--white); }
   box-shadow: 0 4px 16px rgba(0,0,0,0.35);
 }
 [data-theme="dark"] .app-meta h3 { color: #F1F5F9; }
-[data-theme="dark"] .app-desc { color: #94A3B8; }
+[data-theme="dark"] .app-status-dot { background: #161D33; }
 [data-theme="dark"] .feat-chip {
   background: rgba(255,255,255,0.06);
   color: #CBD5E1;
@@ -1328,3 +1286,78 @@ footer, input, textarea, select {
   background: linear-gradient(90deg, #1E263F 25%, #29314D 50%, #1E263F 75%);
   background-size: 200% 100%;
 }
+
+/* ─────────────────────────────────────────────
+   APP VIEW COUNTER (detail modal)
+───────────────────────────────────────────── */
+.app-view-count {
+  display: inline-block;
+  margin-top: 6px;
+  margin-left: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gray);
+  background: var(--off-white);
+  padding: 3px 10px;
+  border-radius: 50px;
+}
+[data-theme="dark"] .app-view-count {
+  background: rgba(255,255,255,0.06);
+  color: #94A3B8;
+}
+
+/* ─────────────────────────────────────────────
+   TESTIMONIALS SECTION
+───────────────────────────────────────────── */
+.testimonials-section { background: var(--white); }
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+.testimonial-card {
+  background: var(--off-white);
+  border: 1px solid var(--gray-light);
+  border-radius: 18px;
+  padding: 26px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.testimonial-stars {
+  color: var(--gold);
+  font-size: 1rem;
+  letter-spacing: 2px;
+}
+.testimonial-msg {
+  color: var(--navy-dark);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  flex: 1;
+}
+.testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.testimonial-avatar {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy), var(--navy-light));
+  color: var(--white);
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.testimonial-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.testimonial-name { font-weight: 700; color: var(--navy-dark); font-size: 0.9rem; }
+.testimonial-role { color: var(--gray); font-size: 0.78rem; }
+
+[data-theme="dark"] .testimonials-section { background: #0F1424; }
+[data-theme="dark"] .testimonial-card {
+  background: #161D33;
+  border-color: rgba(255,255,255,0.08);
+}
+[data-theme="dark"] .testimonial-msg { color: #E2E8F0; }
+[data-theme="dark"] .testimonial-name { color: #F1F5F9; }

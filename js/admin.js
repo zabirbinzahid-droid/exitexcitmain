@@ -23,6 +23,7 @@
     currentTab: 'dashboard',
     apps: [],
     slides: [],
+    testimonials: [],
     messages: [],
     msgUnsub: null
   };
@@ -65,6 +66,7 @@
     bindMessageRefresh();
     bindAppAddBtn();
     bindSlideAddBtn();
+    bindTestimonialAddBtn();
   });
 
   // Wait for Firebase ready
@@ -220,6 +222,7 @@
     if (tab === 'dashboard') loadDashboard();
     if (tab === 'apps') loadApps();
     if (tab === 'slides') loadSlides();
+    if (tab === 'testimonials') loadTestimonials();
     if (tab === 'messages') loadMessages();
     if (tab === 'hero') loadHeroForm();
     if (tab === 'about') loadAboutForm();
@@ -1115,6 +1118,184 @@
   }
 
   // ============================================================
+  //  TESTIMONIALS CRUD
+  // ============================================================
+  function bindTestimonialAddBtn() {
+    const btn = $('#addTestimonialBtn');
+    if (btn) btn.onclick = () => openTestimonialModal(null);
+  }
+
+  function loadTestimonials() {
+    const wrap = $('#testimonialsList');
+    if (!wrap) return;
+    wrap.innerHTML = '<div class="list-empty">লোড হচ্ছে...</div>';
+
+    window.db.collection('testimonials')
+      .orderBy('order', 'asc')
+      .get()
+      .then(snap => {
+        if (snap.empty) {
+          wrap.innerHTML = '<div class="list-empty">কোনো মতামত নেই। "নতুন মতামত" বাটনে ক্লিক করে যোগ করুন।</div>';
+          return;
+        }
+        state.testimonials = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        wrap.innerHTML = state.testimonials.map(renderTestimonialRow).join('');
+        bindTestimonialRowActions();
+      })
+      .catch(err => {
+        console.error('Testimonials load failed:', err);
+        wrap.innerHTML = '<div class="list-empty">লোড ব্যর্থ: ' + escapeHtml(err.message) + '</div>';
+      });
+  }
+
+  function renderTestimonialRow(t) {
+    const visible = t.visible !== false;
+    const thumb = t.avatar
+      ? `<img src="${escapeHtml(t.avatar)}" alt="">`
+      : `<span>${escapeHtml((t.name || '?').trim().charAt(0).toUpperCase())}</span>`;
+    const rating = Math.max(0, Math.min(5, parseInt(t.rating, 10) || 5));
+    return `
+      <div class="list-row" data-testimonial-id="${escapeHtml(t.id)}">
+        <div class="list-row-thumb">${thumb}</div>
+        <div class="list-row-main">
+          <div class="list-row-title">${escapeHtml(t.name || 'নাম নেই')} ${'★'.repeat(rating)}</div>
+          <div class="list-row-sub">${escapeHtml(t.role || '')} · Order: ${t.order ?? 100} · ${visible ? '👁 দৃশ্যমান' : '🚫 লুকানো'}</div>
+        </div>
+        <div class="list-row-actions">
+          <button class="btn-secondary btn-sm" data-action="toggle-vis">${visible ? '👁 লুকান' : '👁 দেখান'}</button>
+          <button class="btn-secondary btn-sm" data-action="edit">✏️ এডিট</button>
+          <button class="btn-danger btn-sm" data-action="delete">🗑</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindTestimonialRowActions() {
+    $$('#testimonialsList .list-row').forEach(row => {
+      const id = row.dataset.testimonialId;
+      row.querySelector('[data-action="edit"]').onclick = () => {
+        const t = state.testimonials.find(x => x.id === id);
+        if (t) openTestimonialModal(t);
+      };
+      row.querySelector('[data-action="delete"]').onclick = () => {
+        if (confirm('এই মতামতটি মুছে ফেলতে চান?')) {
+          window.db.collection('testimonials').doc(id).delete()
+            .then(() => { toast('মুছে ফেলা হয়েছে', 'success'); loadTestimonials(); })
+            .catch(err => toast('মুছতে সমস্যা: ' + err.message, 'error'));
+        }
+      };
+      row.querySelector('[data-action="toggle-vis"]').onclick = () => {
+        const t = state.testimonials.find(x => x.id === id);
+        if (!t) return;
+        const newVis = t.visible === false ? true : false;
+        window.db.collection('testimonials').doc(id).update({ visible: newVis })
+          .then(() => { toast(newVis ? 'দৃশ্যমান করা হলো' : 'লুকানো হলো', 'success'); loadTestimonials(); })
+          .catch(err => toast('আপডেট ব্যর্থ: ' + err.message, 'error'));
+      };
+    });
+  }
+
+  function openTestimonialModal(t) {
+    const isNew = !t;
+    const data = t || { name: '', role: '', message: '', rating: 5, avatar: '', order: 100, visible: true };
+
+    const html = `
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>${isNew ? '➕ নতুন মতামত' : '✏️ মতামত এডিট'}</h3>
+          <button class="modal-close" id="testimonialModalClose">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="testimonialEditForm">
+            <div class="form-grid">
+              <div>
+                <label>নাম *</label>
+                <input type="text" id="tName" required value="${escapeHtml(data.name)}">
+              </div>
+              <div>
+                <label>পদবি / প্রতিষ্ঠান</label>
+                <input type="text" id="tRole" value="${escapeHtml(data.role)}" placeholder="ছাত্র, ঢাকা বিশ্ববিদ্যালয়">
+              </div>
+              <div class="full">
+                <label>মতামত *</label>
+                <textarea id="tMessage" rows="3" required>${escapeHtml(data.message)}</textarea>
+              </div>
+              <div>
+                <label>রেটিং (১-৫)</label>
+                <select id="tRating">
+                  ${[5,4,3,2,1].map(n => `<option value="${n}" ${data.rating==n?'selected':''}>${'★'.repeat(n)}${'☆'.repeat(5-n)}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label>Order (ছোট সংখ্যা আগে দেখাবে)</label>
+                <input type="number" id="tOrder" value="${data.order ?? 100}">
+              </div>
+              <div class="full">
+                <label>Avatar ছবি URL (ঐচ্ছিক — Imgur লিংক)</label>
+                <input type="text" id="tAvatar" value="${escapeHtml(data.avatar || '')}" placeholder="https://i.imgur.com/xyz.jpg">
+              </div>
+              <div class="full">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="tVisible" ${data.visible !== false ? 'checked' : ''}>
+                  সাইটে দৃশ্যমান থাকবে
+                </label>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" id="tCancel">বাতিল</button>
+          <button class="btn-primary" id="tSave">💾 সেভ</button>
+        </div>
+      </div>
+    `;
+
+    const host = $('#modalHost');
+    host.innerHTML = html;
+    host.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    $('#testimonialModalClose').onclick = closeModal;
+    $('#tCancel').onclick = closeModal;
+    $('#tSave').onclick = () => saveTestimonial(t ? t.id : null);
+  }
+
+  function saveTestimonial(id) {
+    const name = $('#tName').value.trim();
+    const message = $('#tMessage').value.trim();
+    if (!name || !message) {
+      toast('নাম ও মতামত আবশ্যক', 'error');
+      return;
+    }
+    const payload = {
+      name,
+      role: $('#tRole').value.trim(),
+      message,
+      rating: parseInt($('#tRating').value, 10) || 5,
+      order: parseInt($('#tOrder').value, 10) || 100,
+      avatar: $('#tAvatar').value.trim(),
+      visible: $('#tVisible').checked
+    };
+
+    const btn = $('#tSave');
+    btn.disabled = true;
+    btn.textContent = 'সেভ হচ্ছে...';
+
+    const ref = id ? window.db.collection('testimonials').doc(id) : window.db.collection('testimonials').doc();
+    const save = id ? ref.update(payload) : ref.set({ ...payload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+    save.then(() => {
+      toast('সেভ হয়েছে', 'success');
+      closeModal();
+      loadTestimonials();
+    }).catch(err => {
+      toast('সেভ ব্যর্থ: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = '💾 সেভ';
+    });
+  }
+
+  // ============================================================
   //  HERO FORM
   // ============================================================
   let heroStats = [];
@@ -1538,7 +1719,10 @@
     if (type === 'video') folder = (c.videosPath || 'videos');
     else if (type === 'audio') folder = (c.audioPath || 'media');
     else folder = (c.imagesPath || 'images');
-    const apiUrl = `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${folder}?ref=${c.branch || 'main'}`;
+    // Cache-bust: without this, browsers (and sometimes GitHub's own CDN)
+    // can serve a stale file listing, so a video/image you JUST pushed to
+    // GitHub won't show up in the picker until the cache expires.
+    const apiUrl = `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${folder}?ref=${c.branch || 'main'}&_=${Date.now()}`;
 
     const titleText = type === 'video' ? 'ভিডিও' : (type === 'audio' ? 'অডিও' : 'ছবি');
 
@@ -1549,8 +1733,9 @@
           <button class="modal-close" id="ghPickerClose">×</button>
         </div>
         <div class="modal-body">
-          <div style="margin-bottom:12px;padding:10px 14px;background:var(--off-white);border-radius:8px;font-size:0.82rem;color:var(--gray);">
-            📁 <strong>${c.owner}/${c.repo}</strong> → <code>${folder}/</code>
+          <div style="margin-bottom:12px;padding:10px 14px;background:var(--off-white);border-radius:8px;font-size:0.82rem;color:var(--gray);display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <span>📁 <strong>${c.owner}/${c.repo}</strong> → <code>${folder}/</code></span>
+            <button type="button" class="btn-secondary btn-sm" id="ghRefreshBtn">🔄 রিফ্রেশ</button>
           </div>
           <div id="ghFileList" style="min-height:200px;">
             <div class="admin-loading">
@@ -1575,8 +1760,15 @@
     $('#ghPickerCancel').onclick = closeGhPicker;
     host.onclick = e => { if (e.target === host) closeGhPicker(); };
 
-    // Fetch file list from GitHub API
-    fetch(apiUrl)
+    function fetchFileList(url) {
+      const list = $('#ghFileList');
+      list.innerHTML = `<div class="admin-loading"><div class="spinner"></div>ফাইল লিস্ট লোড হচ্ছে...</div>`;
+      $('#ghPickerError').style.display = 'none';
+
+      // cache: 'no-store' — always hit the network, never return a stale
+      // browser-cached file list (this was the cause of newly-added GitHub
+      // files not appearing in the picker).
+      fetch(url, { cache: 'no-store' })
       .then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
@@ -1666,6 +1858,14 @@
         errEl.style.display = 'block';
         toast('লোড ব্যর্থ: ' + msg, 'error');
       });
+    }
+
+    fetchFileList(apiUrl);
+
+    $('#ghRefreshBtn') && ($('#ghRefreshBtn').onclick = () => {
+      // New timestamp each time → guarantees a fresh network hit
+      fetchFileList(apiUrl.replace(/&_=\d+$/, '') + '&_=' + Date.now());
+    });
   }
 
   function formatFileSize(bytes) {
@@ -1688,17 +1888,18 @@
         </div>
         <div class="modal-body">
           <div style="text-align:center;margin-bottom:18px;">
-            <div style="width:90px;height:90px;border-radius:18px;background:var(--off-white);border:2px dashed var(--gray-light);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;color:var(--gray);" id="iconPreview">
+            <div style="width:90px;height:90px;border-radius:18px;background:var(--off-white);border:2px dashed var(--gray-light);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;color:var(--gray);overflow:hidden;" id="iconPreview">
               ${currentIcon && currentIcon.startsWith('http')
-                ? `<img src="${escapeHtml(currentIcon)}" style="width:100%;height:100%;object-fit:contain;border-radius:16px;" alt="">`
+                ? `<img src="${escapeHtml(currentIcon)}" style="width:100%;height:100%;object-fit:contain;" alt="">`
                 : (currentIcon || '📦')}
             </div>
+            <button type="button" class="btn-secondary btn-sm" id="iconClearBtn">❌ আইকন মুছুন (ডিফল্ট 📦)</button>
           </div>
 
           <div class="form-group">
             <label>অপশন ১: Emoji দিন</label>
             <input type="text" id="iconEmoji" placeholder="🍽️" maxlength="4" value="${currentIcon && !currentIcon.startsWith('http') ? escapeHtml(currentIcon) : ''}">
-            <div class="form-help">যেকোনো emoji পেস্ট করুন।</div>
+            <div class="form-help">যেকোনো emoji পেস্ট করুন (ইমেজ/URL দিলে এটা স্বয়ংক্রিয়ভাবে খালি হয়ে যাবে)।</div>
           </div>
 
           ${isGithubConfigured() ? `
@@ -1706,18 +1907,20 @@
               <label>অপশন ২: GitHub থেকে ছবি বাছুন (PNG/JPG)</label>
               <button type="button" class="btn-secondary" style="width:100%;" id="iconGithubBtn">📂 GitHub images ফোল্ডার খুলুন</button>
             </div>
-          ` : ''}
+          ` : `
+            <div class="form-help" style="margin-bottom:14px;">GitHub picker চালু করতে <code>js/firebase-config.js</code> এ <code>githubConfig</code> বসান।</div>
+          `}
 
           ${isStorageReady() ? `
             <div class="form-group">
-              <label>অপশন ৩: কম্পিউটার থেকে আপলোড ${isStorageReady() ? '' : '(Firebase Storage দরকার)'}</label>
+              <label>অপশন ৩: কম্পিউটার থেকে আপলোড</label>
               <input type="file" accept="image/*" id="iconFile" style="display:none;">
               <button type="button" class="btn-secondary" style="width:100%;" id="iconUploadBtn">📤 কম্পিউটার থেকে আপলোড</button>
             </div>
           ` : ''}
 
           <div class="form-group">
-            <label>অপশন ৪: URL দিন</label>
+            <label>অপশন ৪: ছবির সরাসরি URL দিন</label>
             <input type="text" id="iconUrl" placeholder="https://..." value="${currentIcon && currentIcon.startsWith('http') ? escapeHtml(currentIcon) : ''}">
           </div>
         </div>
@@ -1734,14 +1937,14 @@
     document.body.style.overflow = 'hidden';
     host.onclick = e => { if (e.target === host) closeIconPicker(); };
 
+    // Single source of truth for the chosen icon value
     let chosenIcon = currentIcon || '📦';
 
-    // Live preview
     function updatePreview(val) {
       const prev = $('#iconPreview');
       if (!prev) return;
       if (val && val.startsWith('http')) {
-        prev.innerHTML = `<img src="${escapeHtml(val)}" style="width:100%;height:100%;object-fit:contain;border-radius:16px;" alt="" onerror="this.parentNode.innerHTML='⚠️'">`;
+        prev.innerHTML = `<img src="${escapeHtml(val)}" style="width:100%;height:100%;object-fit:contain;" alt="" onerror="this.parentNode.innerHTML='⚠️'">`;
       } else if (val) {
         prev.innerHTML = escapeHtml(val);
       } else {
@@ -1749,27 +1952,35 @@
       }
     }
 
-    $('#iconEmoji') && $('#iconEmoji').addEventListener('input', e => {
-      chosenIcon = e.target.value || '📦';
+    function setIcon(val) {
+      chosenIcon = val || '📦';
+      updatePreview(chosenIcon);
+      if ($('#iconEmoji')) $('#iconEmoji').value = (chosenIcon.startsWith('http')) ? '' : (chosenIcon === '📦' && !val ? '' : chosenIcon);
+      if ($('#iconUrl')) $('#iconUrl').value = chosenIcon.startsWith('http') ? chosenIcon : '';
+    }
+
+    $('#iconEmoji') && ($('#iconEmoji').oninput = e => {
+      const v = e.target.value;
+      chosenIcon = v || '📦';
       updatePreview(chosenIcon);
       $('#iconUrl').value = '';
     });
 
-    $('#iconUrl') && $('#iconUrl').addEventListener('input', e => {
-      chosenIcon = e.target.value;
+    $('#iconUrl') && ($('#iconUrl').oninput = e => {
+      const v = e.target.value.trim();
+      chosenIcon = v || '📦';
       updatePreview(chosenIcon);
       $('#iconEmoji').value = '';
     });
 
-    // GitHub picker (separate overlay, no conflict)
+    $('#iconClearBtn') && ($('#iconClearBtn').onclick = () => setIcon(''));
+
+    // GitHub picker (separate overlay, layered ABOVE this one — see admin.html z-index)
     const ghBtn = $('#iconGithubBtn');
     if (ghBtn) {
       ghBtn.onclick = () => {
         openGithubPicker('image', (url, name) => {
-          chosenIcon = url;
-          if ($('#iconUrl')) $('#iconUrl').value = url;
-          if ($('#iconEmoji')) $('#iconEmoji').value = '';
-          updatePreview(url);
+          setIcon(url);
           toast('আইকন নির্বাচিত: ' + name, 'success');
         });
       };
@@ -1793,9 +2004,7 @@
           const ref = window.storage.ref(path);
           const snap = await ref.put(f);
           const url = await snap.ref.getDownloadURL();
-          chosenIcon = url;
-          $('#iconUrl').value = url;
-          updatePreview(url);
+          setIcon(url);
           toast('আইকন আপলোড হয়েছে', 'success');
         } catch (err) {
           toast('আপলোড ব্যর্থ: ' + err.message, 'error');
@@ -1807,14 +2016,11 @@
     $('#iconPickerCancel').onclick = closeIconPicker;
 
     $('#iconPickerSave').onclick = () => {
-      const emoji = $('#iconEmoji').value.trim();
-      const url = $('#iconUrl').value.trim();
-      let finalIcon;
-      if (url) finalIcon = url;
-      else if (emoji) finalIcon = emoji;
-      else finalIcon = chosenIcon || '📦';
+      // chosenIcon is always kept in sync by setIcon()/the input handlers above —
+      // no more re-reading both fields and guessing priority (that was the old,
+      // fragile approach that sometimes saved the wrong value).
       closeIconPicker();
-      if (onPick) onPick(finalIcon);
+      if (onPick) onPick(chosenIcon || '📦');
     };
   }
 
