@@ -366,6 +366,11 @@
             <label>আপনার বার্তা *</label>
             <textarea id="fmessage" placeholder="আপনার বার্তা এখানে লিখুন..."></textarea>
           </div>
+          <!-- Honeypot — invisible to real users, bots fill it -->
+          <div class="hp-field" aria-hidden="true">
+            <label for="fwebsite">Website</label>
+            <input type="text" id="fwebsite" name="website" tabindex="-1" autocomplete="off">
+          </div>
           <button type="button" class="submit-btn" id="submitFormBtn">
             <span>✉️</span> বার্তা পাঠান
           </button>
@@ -378,18 +383,23 @@
       </div>
     `;
     bindScrollAnimations();
+    // Mark when the form became visible — used to reject inhuman-speed bot submits
+    const formEl = document.getElementById('contactForm');
+    if (formEl) formEl.dataset.renderedAt = String(Date.now());
     bindContactForm();
   }
 
   // ---------- APPS ----------
+  let allAppsCache = [];
+  let appsFilterState = { query: '', status: 'all' };
+
+  function skeletonCardsHtml(n) {
+    return Array.from({ length: n }).map(() => '<div class="skeleton-card"></div>').join('');
+  }
+
   function loadApps() {
     if (!els.appsGrid) return;
-    els.appsGrid.innerHTML = `
-      <div class="loading-state" style="grid-column:1/-1;">
-        <div class="spinner"></div>
-        Apps লোড হচ্ছে...
-      </div>
-    `;
+    els.appsGrid.innerHTML = skeletonCardsHtml(6);
 
     window.db.collection('apps')
       .where('visible', '==', true)
@@ -407,7 +417,9 @@
         const apps = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-        renderApps(apps);
+        allAppsCache = apps;
+        renderApps(applyAppsFilter(apps));
+        bindAppsToolbar();
       })
       .catch(err => {
         console.warn('Apps load failed:', err);
@@ -418,6 +430,52 @@
           </div>
         `;
       });
+  }
+
+  // Client-side search + status filter (no extra Firestore reads — uses allAppsCache)
+  function applyAppsFilter(apps) {
+    const q = appsFilterState.query.trim().toLowerCase();
+    const status = appsFilterState.status;
+    return apps.filter(app => {
+      const matchesQuery = !q ||
+        (app.name || '').toLowerCase().includes(q) ||
+        (app.tagline || '').toLowerCase().includes(q) ||
+        (app.description || '').toLowerCase().includes(q);
+      const matchesStatus = status === 'all' || (app.status || 'soon') === status;
+      return matchesQuery && matchesStatus;
+    });
+  }
+
+  function bindAppsToolbar() {
+    const searchInput = document.getElementById('appSearchInput');
+    const chips = document.querySelectorAll('#appFilterChips .filter-chip');
+    if (!searchInput && !chips.length) return;
+
+    function refresh() {
+      const filtered = applyAppsFilter(allAppsCache);
+      if (!filtered.length) {
+        els.appsGrid.innerHTML = `<div class="loading-state" style="grid-column:1/-1;">😕 কোনো app পাওয়া যায়নি।</div>`;
+        return;
+      }
+      renderApps(filtered);
+    }
+
+    if (searchInput) {
+      // .oninput (not addEventListener) — loadApps()/bindAppsToolbar() can re-run
+      // safely (e.g. after re-login) without stacking duplicate handlers.
+      searchInput.oninput = () => {
+        appsFilterState.query = searchInput.value;
+        refresh();
+      };
+    }
+    chips.forEach(chip => {
+      chip.onclick = () => {
+        chips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        appsFilterState.status = chip.getAttribute('data-filter');
+        refresh();
+      };
+    });
   }
 
   function renderApps(apps) {
@@ -782,6 +840,22 @@
     const subject = (document.getElementById('fsubject') || {}).value;
     const message = (document.getElementById('fmessage') || {}).value;
 
+    // --- Spam protection (no backend needed) ---
+    // 1) Honeypot: real users never see/fill this field; bots usually do.
+    const honeypot = (document.getElementById('fwebsite') || {}).value;
+    if (honeypot) {
+      // Silently pretend success — don't tip off the bot, don't save to Firestore.
+      showContactSuccess();
+      return;
+    }
+    // 2) Bot-speed check: a human needs at least a couple seconds to fill this form.
+    const formEl = document.getElementById('contactForm');
+    const renderedAt = formEl ? parseInt(formEl.dataset.renderedAt || '0', 10) : 0;
+    if (renderedAt && (Date.now() - renderedAt) < 2000) {
+      showContactSuccess();
+      return;
+    }
+
     if (!name || !email || !subject || !message) {
       alert('অনুগ্রহ করে সব প্রয়োজনীয় তথ্য পূরণ করুন।');
       return;
@@ -789,6 +863,12 @@
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       alert('সঠিক ইমেইল ঠিকানা দিন।');
+      return;
+    }
+    // 3) Simple local rate-limit: max 1 message every 60s from this browser.
+    const lastSent = parseInt(localStorage.getItem('lastContactSentAt') || '0', 10);
+    if (lastSent && (Date.now() - lastSent) < 60000) {
+      alert('একটু আগেই একটা মেসেজ পাঠিয়েছেন। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।');
       return;
     }
 
@@ -810,6 +890,7 @@
       read: false,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => {
+      localStorage.setItem('lastContactSentAt', String(Date.now()));
       showContactSuccess();
     }).catch(err => {
       console.error('Message save failed:', err);

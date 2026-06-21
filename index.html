@@ -6,6 +6,21 @@
 <title>Exit Excit — Digital Solutions</title>
 <meta name="description" content="Exit Excit — বাংলাদেশী Digital Solutions কোম্পানি। বাস্তব সমস্যার সমাধানে তৈরি অ্যাপস।">
 
+<!-- Open Graph (Facebook, WhatsApp, LinkedIn share preview) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Exit Excit — Digital Solutions">
+<meta property="og:description" content="বাংলাদেশী Digital Solutions কোম্পানি। বাস্তব সমস্যার সমাধানে তৈরি অ্যাপস।">
+<meta property="og:image" content="assets/logo.png">
+<meta property="og:url" content="https://YOUR-USERNAME.github.io/YOUR-REPO/">
+<meta property="og:site_name" content="Exit Excit">
+<meta property="og:locale" content="bn_BD">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Exit Excit — Digital Solutions">
+<meta name="twitter:description" content="বাংলাদেশী Digital Solutions কোম্পানি। বাস্তব সমস্যার সমাধানে তৈরি অ্যাপস।">
+<meta name="twitter:image" content="assets/logo.png">
+
 <!-- CSS -->
 <link rel="stylesheet" href="css/style.css">
 
@@ -13,6 +28,14 @@
 <link rel="icon" type="image/png" href="assets/logo.png">
 </head>
 <body>
+<!-- THEME INIT — runs before paint to avoid a light-mode flash -->
+<script>
+  (function () {
+    var saved = localStorage.getItem('theme');
+    var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
 
 <!-- NAV -->
 <nav>
@@ -28,6 +51,9 @@
     <li><a href="admin.html" class="nav-admin-link" title="Admin Panel">🔒 Admin</a></li>
   </ul>
   <div style="display:flex;align-items:center;gap:14px;">
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Dark/Light mode">
+      <span class="theme-icon-sun">☀️</span><span class="theme-icon-moon">🌙</span>
+    </button>
     <a href="#contact" class="nav-cta">যোগাযোগ →</a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -89,11 +115,22 @@
     <h2 class="section-title">আমাদের Apps</h2>
     <p class="section-sub">প্রতিটি app তৈরি হয়েছে বাস্তব জীবনের সমস্যার কথা মাথায় রেখে। সহজে ব্যবহারযোগ্য, বিনামূল্যে।</p>
   </div>
-  <div class="apps-grid" data-apps-grid>
-    <div class="loading-state" style="grid-column:1/-1;">
-      <div class="spinner"></div>
-      Apps লোড হচ্ছে...
+  <div class="apps-toolbar">
+    <input type="text" id="appSearchInput" class="apps-search" placeholder="🔍 App খুঁজুন...">
+    <div class="apps-filter-chips" id="appFilterChips">
+      <button type="button" class="filter-chip active" data-filter="all">সব</button>
+      <button type="button" class="filter-chip" data-filter="live">🟢 Live</button>
+      <button type="button" class="filter-chip" data-filter="dev">🛠️ Dev</button>
+      <button type="button" class="filter-chip" data-filter="soon">⏳ আসছে</button>
     </div>
+  </div>
+  <div class="apps-grid" data-apps-grid>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
+    <div class="skeleton-card"></div>
   </div>
 </section>
 
@@ -156,6 +193,19 @@
 <script>
   // Auto-update copyright year
   document.getElementById('year').textContent = new Date().getFullYear();
+
+  // Dark/Light mode toggle
+  (function() {
+    const btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+  })();
 
   // Mobile nav toggle
   (function() {

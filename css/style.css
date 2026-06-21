@@ -1111,3 +1111,220 @@ input:focus, textarea:focus, select:focus {
   .fullvideo-section .slide-arrow.next { right: 10px; }
   .fullvideo-label { top: 70px; }
 }
+
+/* ─────────────────────────────────────────────
+   THEME TOGGLE BUTTON
+───────────────────────────────────────────── */
+.theme-toggle {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
+  color: var(--white);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  transition: background 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { background: rgba(232,168,0,0.25); transform: scale(1.06); }
+.theme-icon-moon { display: none; }
+.theme-icon-sun { display: inline; }
+[data-theme="dark"] .theme-icon-sun { display: none; }
+[data-theme="dark"] .theme-icon-moon { display: inline; }
+
+/* nav is dark-navy by default so the toggle works fine in both states;
+   only override color so it stays visible if nav background ever lightens */
+nav .theme-toggle { color: var(--white); }
+
+/* ─────────────────────────────────────────────
+   DARK MODE
+   Scoped overrides — only the light sections
+   (apps/about/contact/footer/cards/forms/modals)
+   need flipping; hero & full-video sections are
+   already dark and need no change.
+───────────────────────────────────────────── */
+[data-theme="dark"] body { background: #0F1424; }
+
+[data-theme="dark"] nav { background: rgba(10,16,32,0.92); }
+[data-theme="dark"] nav.scrolled { background: rgba(10,16,32,0.99); }
+[data-theme="dark"] .nav-links a { color: rgba(255,255,255,0.82); }
+
+[data-theme="dark"] .apps-section,
+[data-theme="dark"] .about-section { background: #0F1424; }
+[data-theme="dark"] .contact-section { background: #0B0F1E; }
+
+[data-theme="dark"] .section-title { color: #F1F5F9; }
+[data-theme="dark"] .section-sub { color: #94A3B8; }
+
+[data-theme="dark"] .app-card {
+  background: #161D33;
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+}
+[data-theme="dark"] .app-meta h3 { color: #F1F5F9; }
+[data-theme="dark"] .app-desc { color: #94A3B8; }
+[data-theme="dark"] .feat-chip {
+  background: rgba(255,255,255,0.06);
+  color: #CBD5E1;
+}
+
+[data-theme="dark"] .about-grid,
+[data-theme="dark"] .about-card,
+[data-theme="dark"] .contact-card,
+[data-theme="dark"] .contact-form,
+[data-theme="dark"] .modal-box,
+[data-theme="dark"] .app-detail-modal {
+  background: #161D33;
+  color: #E2E8F0;
+}
+[data-theme="dark"] .modal-box,
+[data-theme="dark"] .app-detail-modal { border: 1px solid rgba(255,255,255,0.08); }
+
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: #1E263F;
+  border-color: rgba(255,255,255,0.12);
+  color: #E2E8F0;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: #64748B; }
+
+[data-theme="dark"] footer {
+  background: #0B0F1E;
+}
+
+[data-theme="dark"] .slides-section::before { opacity: 0.5; }
+
+/* Smooth transition when switching themes */
+body, nav, .app-card, .apps-section, .about-section, .contact-section,
+footer, input, textarea, select {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* ─────────────────────────────────────────────
+   APPS SEARCH + FILTER TOOLBAR
+───────────────────────────────────────────── */
+.apps-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.apps-search {
+  flex: 1 1 240px;
+  min-width: 200px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--gray-light);
+  background: var(--white);
+  font-size: 0.92rem;
+  color: var(--navy-dark);
+  font-family: 'Noto Sans Bengali','Inter',sans-serif;
+}
+.apps-search:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(232,168,0,0.12);
+}
+.apps-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.filter-chip {
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1.5px solid var(--gray-light);
+  background: var(--white);
+  color: var(--gray);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.filter-chip:hover { border-color: var(--gold); color: var(--navy-dark); }
+.filter-chip.active {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  border-color: transparent;
+  color: var(--navy-dark);
+}
+
+[data-theme="dark"] .apps-search {
+  background: #161D33;
+  border-color: rgba(255,255,255,0.12);
+  color: #E2E8F0;
+}
+[data-theme="dark"] .filter-chip {
+  background: #161D33;
+  border-color: rgba(255,255,255,0.12);
+  color: #94A3B8;
+}
+[data-theme="dark"] .filter-chip:hover { color: #F1F5F9; }
+
+@media (max-width: 600px) {
+  .apps-toolbar { flex-direction: column; align-items: stretch; }
+  .apps-search { width: 100%; }
+}
+
+/* ─────────────────────────────────────────────
+   CONTACT FORM — HONEYPOT (spam protection)
+   Hidden from real users via off-screen positioning
+   (not display:none — basic bots often skip display:none
+   fields, but rarely check actual visibility/position).
+───────────────────────────────────────────── */
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   LOADING SKELETON (apps grid)
+───────────────────────────────────────────── */
+.skeleton-card {
+  border-radius: 22px;
+  background: var(--white);
+  border: 1px solid var(--gray-light);
+  padding: 16px 10px 14px;
+  height: 118px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.skeleton-card::before {
+  content: '';
+  width: 60px; height: 60px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, #E8ECF2 25%, #F3F5F9 50%, #E8ECF2 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.skeleton-card::after {
+  content: '';
+  width: 70%; height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #E8ECF2 25%, #F3F5F9 50%, #E8ECF2 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+[data-theme="dark"] .skeleton-card {
+  background: #161D33;
+  border-color: rgba(255,255,255,0.08);
+}
+[data-theme="dark"] .skeleton-card::before,
+[data-theme="dark"] .skeleton-card::after {
+  background: linear-gradient(90deg, #1E263F 25%, #29314D 50%, #1E263F 75%);
+  background-size: 200% 100%;
+}
